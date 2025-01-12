@@ -1,0 +1,16 @@
+[package]
+name = "MongoToolsCLI"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mongodb = "3.1.1"
+serde_json = "1.0.135"
+tokio = {version = "1.43.0", features = ["full"]}
+tar = "0.4.43"
+flate2 = "1.0.35"
+regex = "1.11.1"
+chrono = "0.4.39"
+futures = "0.3.31"
+colored = "3.0.0"
+cron = "0.14.0"

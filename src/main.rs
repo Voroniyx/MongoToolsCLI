@@ -4,9 +4,11 @@ use chrono::Utc;
 use colored::Colorize;
 use cron::Schedule;
 use std::str::FromStr;
+use crate::restore::restore_from_targz;
 
 mod backup;
 mod utils;
+mod restore;
 
 #[tokio::main]
 async fn main() {
@@ -47,6 +49,26 @@ async fn manual() {
         handle_backup_result(backup_result, false);
     } else if input == "restore" {
         println!("{}", "Restore ist aktuell ein Work in progress".yellow());
+
+        let connection_string = ask(&*format!(
+            "{}",
+            "Bitte gib einen Connection String an:".magenta()
+        ));
+        if connection_string.is_empty() {
+            println!("{}", "Connection string ist leer".red());
+            return;
+        }
+
+        let zip_path = ask(&*format!(
+            "{}",
+            "Bitte gib einen Zip Datei Pfad an".magenta()
+        ));
+        if zip_path.is_empty() {
+            println!("{}", "Zip Pfad ist leer".red());
+            return;
+        }
+
+        restore_from_targz(&zip_path, &connection_string).await;
     } else {
         println!("{}", "Keine passende Option angegeben".red())
     }

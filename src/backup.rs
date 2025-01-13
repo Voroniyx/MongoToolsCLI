@@ -67,7 +67,7 @@ pub fn handle_backup_result(result: Result<(), Error>, suppress_ok_msg: bool) {
     }
 }
 
-fn extract_db_from_connection_string(connection_string: &str) -> String {
+pub fn extract_db_from_connection_string(connection_string: &str) -> String {
     let re = Regex::new(
         r"mongodb://([^:]+):([^@]+)@([^:/]+)(?::(\d+))?/([^?]+)\?retryWrites=true&w=majority",
     )

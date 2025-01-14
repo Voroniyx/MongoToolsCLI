@@ -1,3 +1,4 @@
+use crate::backup::extract_db_from_connection_string;
 use colored::Colorize;
 use flate2::read::GzDecoder;
 use mongodb::bson::Document;
@@ -7,7 +8,6 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use tar::Archive;
-use crate::backup::extract_db_from_connection_string;
 
 struct CollectionData {
     pub name: String,
@@ -19,7 +19,7 @@ pub async fn restore_from_targz(targz_path: &str, connection_string: &str) {
 
     let client_result = Client::with_uri_str(connection_string).await;
 
-    if client_result.is_ok() {
+    if !client_result.is_ok() {
         println!("Could not create DB Client: {}", client_result.unwrap_err());
         return;
     }
@@ -29,7 +29,12 @@ pub async fn restore_from_targz(targz_path: &str, connection_string: &str) {
     match file_contents {
         Ok(contents) => {
             for collection_data in contents {
-                handle_single_collection(collection_data, &client, extract_db_from_connection_string(connection_string).as_str()).await;
+                handle_single_collection(
+                    collection_data,
+                    &client,
+                    extract_db_from_connection_string(connection_string).as_str(),
+                )
+                .await;
             }
         }
         Err(e) => {
@@ -59,7 +64,7 @@ async fn get_content_from_targz_inner_files(
             entry.read_to_string(&mut contents).unwrap();
             let data = CollectionData {
                 data: contents,
-                name: String::from(entry.path().unwrap().file_name().unwrap().to_str().unwrap()),
+                name: String::from(entry.path().unwrap().file_stem().unwrap().to_str().unwrap()),
             };
             file_contents.push(data)
         }
@@ -90,15 +95,24 @@ async fn handle_single_collection(
         bson_documents.push(bson_doc);
     }
 
-    collection.insert_many(&bson_documents).await.unwrap();
+    let insert_result = collection.insert_many(&bson_documents).await;
 
-    println!(
-        "{}",
-        format!(
-            "Successfully inserted document '{}'. {} Items",
-            collection_data.name,
-            &bson_documents.len()
-        )
-        .green()
-    );
+    if !insert_result.is_ok() {
+        eprintln!(
+            "Could not insert documents in collection: '{}' due to {}",
+            &collection_data.name,
+            insert_result.unwrap_err()
+        );
+    } else {
+        let insert = insert_result.unwrap();
+        println!(
+            "{}",
+            format!(
+                "Successfully inserted {} items into '{}' collection",
+                &insert.inserted_ids.len(),
+                collection_data.name
+            )
+            .green()
+        );
+    }
 }

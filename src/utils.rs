@@ -63,3 +63,13 @@ pub fn append_timestamp(input: &str) -> String {
     let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S").to_string();
     format!("{}_{}", input, timestamp)
 }
+
+pub fn trim_double_quotes_chars(input: &str) -> String {
+    let mut chars = input.chars();
+
+    if chars.next() == Some('"') && chars.next_back() == Some('"') {
+        chars.collect()
+    } else {
+        input.to_string()
+    }
+}

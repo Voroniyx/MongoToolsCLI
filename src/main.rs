@@ -1,5 +1,5 @@
 use crate::backup::{create_backup, handle_backup_result};
-use crate::utils::{ask, get_readable_timestamp};
+use crate::utils::{ask, get_readable_timestamp, trim_double_quotes_chars};
 use chrono::Utc;
 use colored::Colorize;
 use cron::Schedule;
@@ -16,7 +16,7 @@ async fn main() {
 
     match run_as_cron_job_env {
         Ok(cron_expression) => {
-            cron(cron_expression).await;
+            cron(trim_double_quotes_chars(&cron_expression)).await;
         }
         _ => {
             manual().await;
@@ -28,7 +28,7 @@ async fn manual() {
     println!("{}", "MongoDB CLI Tools".green().bold());
     println!("{}", "Folgende Funktionen sind möglich:".green());
     println!("{}", "- backup".cyan());
-    println!("{}", "- restore (WIP)".cyan());
+    println!("{}", "- restore".cyan());
 
     let input = ask(&*format!(
         "{}",
@@ -48,8 +48,6 @@ async fn manual() {
         let backup_result = create_backup(&*connection_string).await;
         handle_backup_result(backup_result, false);
     } else if input == "restore" {
-        println!("{}", "Restore ist aktuell ein Work in progress".yellow());
-
         let connection_string = ask(&*format!(
             "{}",
             "Bitte gib einen Connection String an:".magenta()
@@ -84,7 +82,8 @@ async fn cron(cron_expression: String) {
     let connection_string_env = std::env::var("MONGOTOOLS_CONNECTION_STRING");
 
     match connection_string_env {
-        Ok(connection_string) => {
+        Ok(mut connection_string) => {
+            connection_string = trim_double_quotes_chars(&connection_string);
             let schedule = Schedule::from_str(&cron_expression).expect("Invalid cron job time");
             loop {
                 if let Some(job_time) = schedule.upcoming(Utc).take(1).next() {

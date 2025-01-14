@@ -4,9 +4,11 @@
 
 ### Environment Vars:
 - `MONGOTOOLS_CRON_JOB`
-  - Beispiel: `0 * * * * *` -> 'Every Minute' 
-  > ![NOTE]
-  > Die Cron-Expression muss 6 stellen lang sein
+  - Beispiel: `0 * * * * *` -> 'Every Minute'
+    
+> [!NOTE]
+> Die Cron-Expression muss 6 Stellen lang sein wie die Spring Cron Expressions
+
 - `MONGOTOOLS_CONNECTION_STRING`
   - Beispiel: `mongodb://<db_user_name>:<db_user_pwd>@<ip>:<port>/<db_name>?retryWrites=true&w=majority`
 

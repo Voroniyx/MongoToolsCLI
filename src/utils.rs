@@ -64,7 +64,7 @@ pub fn append_timestamp(input: &str) -> String {
     format!("{}_{}", input, timestamp)
 }
 
-pub fn trim_double_quotes_chars(input: &str) -> String {
+pub fn trim_double_quotes_chars(input: String) -> String {
     let mut chars = input.chars();
 
     if chars.next() == Some('"') && chars.next_back() == Some('"') {

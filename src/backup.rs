@@ -8,9 +8,10 @@ use mongodb::Client;
 use regex::Regex;
 use tokio::io::AsyncWriteExt;
 
-pub async fn create_backup(connection_string: &str) -> Result<(), Error> {
-    let client_result = Client::with_uri_str(connection_string).await;
-    let db_name = extract_db_from_connection_string(connection_string);
+pub async fn create_backup(connection_string_option: Option<String>) -> Result<(), Error> {
+    let connection_string = connection_string_option.expect("Connection string not found");
+    let client_result = Client::with_uri_str(&connection_string).await;
+    let db_name = extract_db_from_connection_string(&connection_string);
 
     match client_result {
         Ok(client) => {
@@ -54,13 +55,13 @@ pub fn handle_backup_result(result: Result<(), Error>, suppress_ok_msg: bool) {
     match result {
         Ok(..) => {
             if !suppress_ok_msg {
-                println!("{}", "Backup wurde unter '/out/' erstellt".green());
+                println!("{}", "Backup created under '/out/'".green());
             }
         }
         Err(e) => {
             println!(
                 "{}, {:?}",
-                "Während der Backup erstellung ist ein Fehler aufgetreten ".red(),
+                "An error occurred during backup creation".red(),
                 e
             )
         }

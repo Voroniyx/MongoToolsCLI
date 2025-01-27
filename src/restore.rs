@@ -1,4 +1,5 @@
 use crate::backup::extract_db_from_connection_string;
+use crate::config::Config;
 use colored::Colorize;
 use flate2::read::GzDecoder;
 use mongodb::bson::Document;
@@ -14,10 +15,12 @@ struct CollectionData {
     pub data: String,
 }
 
-pub async fn restore_from_targz(targz_path: &str, connection_string: &str) {
-    let file_contents = get_content_from_targz_inner_files(targz_path).await;
+pub async fn restore_from_targz(config: Config) {
+    let archive_path = config.targz_path.expect("Tar GZ Path not found");
+    let file_contents = get_content_from_targz_inner_files(&archive_path).await;
 
-    let client_result = Client::with_uri_str(connection_string).await;
+    let conn_string = config.connection_string.expect("Connection String not found");
+    let client_result = Client::with_uri_str(&conn_string).await;
 
     if !client_result.is_ok() {
         println!("Could not create DB Client: {}", client_result.unwrap_err());
@@ -32,7 +35,7 @@ pub async fn restore_from_targz(targz_path: &str, connection_string: &str) {
                 handle_single_collection(
                     collection_data,
                     &client,
-                    extract_db_from_connection_string(connection_string).as_str(),
+                    extract_db_from_connection_string(&conn_string).as_str(),
                 )
                 .await;
             }

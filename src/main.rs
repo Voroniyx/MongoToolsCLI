@@ -1,111 +1,163 @@
+use std::cmp::PartialEq;
 use crate::backup::{create_backup, handle_backup_result};
+use crate::config::{Config, ConfigLoadError};
+use crate::restore::restore_from_targz;
 use crate::utils::{ask, get_readable_timestamp, trim_double_quotes_chars};
 use chrono::Utc;
 use colored::Colorize;
 use cron::Schedule;
 use std::str::FromStr;
-use crate::restore::restore_from_targz;
 
 mod backup;
-mod utils;
+mod config;
 mod restore;
+mod utils;
+
+#[derive(Debug, PartialEq)]
+enum CliMode {
+    Backup,
+    Restore,
+}
+
 
 #[tokio::main]
 async fn main() {
-    let run_as_cron_job_env = std::env::var("MONGOTOOLS_CRON_JOB");
-
-    match run_as_cron_job_env {
-        Ok(cron_expression) => {
-            cron(trim_double_quotes_chars(&cron_expression)).await;
+    match Config::load().await {
+        Ok(config) => {
+            let cli_force = config.force_cli.unwrap_or(false);
+            if cli_force {
+                //cli with config
+                manual(Some(config)).await;
+            } else {
+                //Cron Mode
+                cron(config).await;
+            }
         }
-        _ => {
-            manual().await;
+        Err(ConfigLoadError::NotFound) => {
+            //CLI Mode
+            manual(None).await;
+        }
+        Err(ConfigLoadError::ParseError(err)) => {
+            eprintln!("{}", err);
         }
     }
 }
 
-async fn manual() {
+async fn manual(config: Option<Config>) {
     println!("{}", "MongoDB CLI Tools".green().bold());
-    println!("{}", "Folgende Funktionen sind möglich:".green());
+    println!("{}", "Following features are available".green());
     println!("{}", "- backup".cyan());
     println!("{}", "- restore".cyan());
 
     let input = ask(&*format!(
         "{}",
-        "Welche Funktion soll ausgeführt werden?".magenta()
+        "Which feature should executed".magenta()
     ));
 
     if input == "backup" {
-        let connection_string = ask(&*format!(
-            "{}",
-            "Bitte gib einen Connection String an:".magenta()
-        ));
-        if connection_string.is_empty() {
-            println!("{}", "Connection string ist leer".red());
-            return;
+        if config.is_none() {
+            let ask_for_config_result = ask_user_for_config(CliMode::Backup);
+
+            match ask_for_config_result {
+                Ok(user_provided_config) => {
+                    let backup_result = create_backup(user_provided_config.connection_string).await;
+                    handle_backup_result(backup_result, false);
+                }
+                Err(err) => {
+                    println!("{}", err.red());
+                }
+            }
+
+        } else {
+            let backup_result = create_backup(config.unwrap().connection_string).await;
+            handle_backup_result(backup_result, false);
         }
 
-        let backup_result = create_backup(&*connection_string).await;
-        handle_backup_result(backup_result, false);
+
     } else if input == "restore" {
-        let connection_string = ask(&*format!(
-            "{}",
-            "Bitte gib einen Connection String an:".magenta()
-        ));
-        if connection_string.is_empty() {
-            println!("{}", "Connection string ist leer".red());
-            return;
+        if config.is_none() {
+            let ask_for_config_result = ask_user_for_config(CliMode::Restore);
+
+            match ask_for_config_result {
+                Ok(user_provided_config) => {
+                    restore_from_targz(user_provided_config).await;
+                }
+                Err(err) => {
+                    println!("{}", err.red());
+                }
+            }
+
+        } else {
+            let unwrapped_config = config.unwrap();
+            restore_from_targz(unwrapped_config).await;
         }
 
-        let zip_path = ask(&*format!(
-            "{}",
-            "Bitte gib einen Zip Datei Pfad an".magenta()
-        ));
-        if zip_path.is_empty() {
-            println!("{}", "Zip Pfad ist leer".red());
-            return;
-        }
 
-        restore_from_targz(&zip_path, &connection_string).await;
     } else {
-        println!("{}", "Keine passende Option angegeben".red())
+        println!("{}", "No matching option provided".red())
     }
 }
 
-async fn cron(cron_expression: String) {
+async fn cron(config: Config) {
     println!(
         "{} {}",
         get_readable_timestamp(),
         "MongoDB CLI Tools Cron Job started".green().bold()
     );
 
-    let connection_string_env = std::env::var("MONGOTOOLS_CONNECTION_STRING");
+    let con_str = config.connection_string.expect("No connection string");
+    let cron_expression = config.cron_job_expression.expect("No cron job expression");
 
-    match connection_string_env {
-        Ok(mut connection_string) => {
-            connection_string = trim_double_quotes_chars(&connection_string);
-            let schedule = Schedule::from_str(&cron_expression).expect("Invalid cron job time");
-            loop {
-                if let Some(job_time) = schedule.upcoming(Utc).take(1).next() {
-                    let until_next = job_time - Utc::now();
-                    tokio::time::sleep(until_next.to_std().unwrap()).await;
-                    println!(
-                        "{} {}",
-                        get_readable_timestamp(),
-                        "Starting Backup...".blue()
-                    );
-                    let backup_result = create_backup(&connection_string).await;
-                    handle_backup_result(backup_result, true);
-                    println!(
-                        "{} {}",
-                        get_readable_timestamp(),
-                        "Backup finished!".green()
-                    );
-                }
-            }
-        }
-        Err(_) => {
-            panic!("MONGOTOOLS_CONNECTION_STRING is not set");
+    let connection_string = trim_double_quotes_chars(con_str);
+    let schedule = Schedule::from_str(&cron_expression).expect("Invalid cron job time");
+    loop {
+        if let Some(job_time) = schedule.upcoming(Utc).take(1).next() {
+            let until_next = job_time - Utc::now();
+            tokio::time::sleep(until_next.to_std().unwrap()).await;
+            println!(
+                "{} {}",
+                get_readable_timestamp(),
+                "Starting Backup...".blue()
+            );
+            let backup_result = create_backup(Option::from(connection_string.clone())).await;
+            handle_backup_result(backup_result, true);
+            println!(
+                "{} {}",
+                get_readable_timestamp(),
+                "Backup finished!".green()
+            );
         }
     }
+}
+
+
+
+fn ask_user_for_config(mode: CliMode) -> Result<Config, String> {
+    let mut config = Config {
+        connection_string: None,
+        targz_path: None,
+        force_cli:None,
+        cron_job_expression: None,
+    };
+
+    config.connection_string = Option::from(ask(&*format!(
+        "{}",
+        "Please provide a mongo db connection string".magenta()
+    )));
+
+    if Some(config.connection_string.as_ref().unwrap()).is_none() {
+        return Err(String::from("Connection string is empty"));
+    }
+
+    if mode == CliMode::Restore {
+        config.targz_path = Option::from(ask(&*format!(
+            "{}",
+            "Please provide a tar gz path".magenta()
+        )));
+        if Some(config.targz_path.as_ref().unwrap()).is_none() {
+            return Err(String::from("Tar GZ Path is empty but required."))
+        }
+    }
+
+    Ok(config)
 }

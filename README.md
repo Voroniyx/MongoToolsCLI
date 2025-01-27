@@ -1,27 +1,34 @@
 # MongoTools
 
 ## 1) Cron Feature
+Executes the backup function based on the cronJob to automate the process of creating backups of a database.
+Backups are stored in a `.tar.gz` archive.
+## 2) CLI
+Possibility of manually creating a backup or restoring a database from a `.tar.gz` archive created with the cronjob function or a manual backup
+## 3) Config
+It is possible to create a JSON Config, which could be helpful if you often have to create manual backups. 
+However, it is actually made for the cron mode to replace the ENVIRONMENT variables. If `forceCli` is set to true, you will be asked whether you want to make a restore or a backup and then the respective options are read from the config.
 
-### Environment Vars:
-- `MONGOTOOLS_CRON_JOB`
-  - Beispiel: `0 * * * * *` -> 'Every Minute'
-    
 > [!NOTE]
-> Die Cron-Expression muss 6 Stellen lang sein wie die Spring Cron Expressions
+> The cron expression must be 6 characters long like the Spring Cron expressions
 
-- `MONGOTOOLS_CONNECTION_STRING`
-  - Beispiel: `mongodb://<db_user_name>:<db_user_pwd>@<ip>:<port>/<db_name>?retryWrites=true&w=majority`
-
-### Beispiel Ausführung:
-Windows:
-```bash
-> set MONGOTOOLS_CRON_JOB="0 * * * * *" # every minute
-> set MONGOTOOLS_CONNECTION_STRING="<connection_string>"
-> MongoToolsCLI.exe
+```json
+{
+  "cronJobExpression": String,
+  "connectionString": String,
+  "forceCli": Boolean,
+  "targzPath": String
+}
 ```
 
-## 2) CLI
-Run:
-`MongoToolsCLI.exe`
+`connectionString` example:
+```
+mongodb://<db_user_name>:<db_user_pwd>@<ip>:<port>/<db_name>?retryWrites=true&w=majority
+```
 
-Einfach den Stritten folgen.
+
+`cronJobExpression` example:
+```
+0 * * * * * 
+```
+*Would create a backup every minute*

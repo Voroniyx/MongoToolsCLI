@@ -13,6 +13,7 @@ dependencies = [
  "futures",
  "mongodb",
  "regex",
+ "serde",
  "serde_json",
  "tar",
  "tokio",

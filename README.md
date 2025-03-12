@@ -36,6 +36,6 @@ mongodb://<db_user_name>:<db_user_pwd>@<ip>:<port>/<db_name>?retryWrites=true&w=
 
 ## Docker
 ```
-docker run --name <containername> -d -v /path/to/config.json:/app/config.json -v /path/to/backupfolder:/app/<targzPath-outputpath> mongotools
+docker run --name <containername> -d -v /path/to/config.json:/app/config.json -v /path/to/backupfolder:/app/<targzPath-outputpath> ghcr.io/voroniyx/mongo-tools-cli
 ```
 On Windows, the paths may have to start and end in `"`

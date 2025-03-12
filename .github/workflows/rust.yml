@@ -1,11 +1,9 @@
-name: Rust
+name: Build Rust
 
 on:
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
-
+    branches:
+      - master
 env:
   CARGO_TERM_COLOR: always
 
@@ -15,6 +13,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --release
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --release

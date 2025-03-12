@@ -23,6 +23,7 @@ However, it is actually made for the cron mode to replace the ENVIRONMENT variab
 
 `connectionString` example:
 ```
+# srv is supported too
 mongodb://<db_user_name>:<db_user_pwd>@<ip>:<port>/<db_name>?retryWrites=true&w=majority
 ```
 
@@ -32,3 +33,9 @@ mongodb://<db_user_name>:<db_user_pwd>@<ip>:<port>/<db_name>?retryWrites=true&w=
 0 * * * * * 
 ```
 *Would create a backup every minute*
+
+## Docker
+```
+docker run --name <containername> -d -v /path/to/config.json:/app/config.json -v /path/to/backupfolder:/app/<targzPath-outputpath> mongotools
+```
+On Windows, the paths may have to start and end in `"`

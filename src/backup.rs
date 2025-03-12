@@ -70,25 +70,15 @@ pub fn handle_backup_result(result: Result<(), Error>, suppress_ok_msg: bool) {
 
 pub fn extract_db_from_connection_string(connection_string: &str) -> String {
     let re = Regex::new(
-        r"mongodb://([^:]+):([^@]+)@([^:/]+)(?::(\d+))?/([^?]+)\?retryWrites=true&w=majority",
-    )
-    .unwrap();
-
-    let mut db_name = String::new();
+        r"mongodb\+srv?://(?:([^:]+):([^@]+)@)?([\w.-]+)/([^?]+)(?:\?(.*))?"
+    ).unwrap();
 
     if let Some(captures) = re.captures(connection_string) {
-        // let db_user = captures.get(1).map_or("", |m| m.as_str());
-        // let db_password = captures.get(2).map_or("", |m| m.as_str());
-        // let ip_or_host = captures.get(3).map_or("", |m| m.as_str());
-        // let port = captures.get(4).map_or("", |m| m.as_str());
-        db_name = captures
-            .get(5)
-            .map_or("".parse().unwrap(), |m| m.as_str().parse().unwrap());
+        return captures.get(4).map_or_else(|| "".to_string(), |m| m.as_str().to_string());
     }
 
-    db_name
+    "".to_string()
 }
-
 
 async fn process_cursor(
     mut cursor: mongodb::Cursor<Document>,
@@ -102,5 +92,3 @@ async fn process_cursor(
     }
     Ok(())
 }
-
-

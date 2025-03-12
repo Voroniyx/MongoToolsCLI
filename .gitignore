@@ -2,3 +2,4 @@
 /out
 Cargo.lock
 /.idea
+config.json

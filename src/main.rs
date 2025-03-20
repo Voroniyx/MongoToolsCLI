@@ -60,7 +60,7 @@ async fn manual(config: Option<Config>) {
 
             match ask_for_config_result {
                 Ok(user_provided_config) => {
-                    let backup_result = create_backup(user_provided_config.connection_string).await;
+                    let backup_result = create_backup(user_provided_config.connection_string, user_provided_config.targz_path).await;
                     handle_backup_result(backup_result, false);
                 }
                 Err(err) => {
@@ -69,7 +69,8 @@ async fn manual(config: Option<Config>) {
             }
 
         } else {
-            let backup_result = create_backup(config.unwrap().connection_string).await;
+            let cnf = config.unwrap();
+            let backup_result = create_backup(cnf.connection_string, cnf.targz_path).await;
             handle_backup_result(backup_result, false);
         }
 
@@ -107,6 +108,7 @@ async fn cron(config: Config) {
 
     let con_str = config.connection_string.expect("No connection string");
     let cron_expression = config.cron_job_expression.expect("No cron job expression");
+    let output_path = config.targz_path.expect("No output path found");
 
     let connection_string = trim_double_quotes_chars(con_str);
     let schedule = Schedule::from_str(&cron_expression).expect("Invalid cron job time");
@@ -119,7 +121,7 @@ async fn cron(config: Config) {
                 get_readable_timestamp(),
                 "Starting Backup...".blue()
             );
-            let backup_result = create_backup(Option::from(connection_string.clone())).await;
+            let backup_result = create_backup(Option::from(connection_string.clone()), Option::from(output_path.clone())).await;
             handle_backup_result(backup_result, true);
             println!(
                 "{} {}",

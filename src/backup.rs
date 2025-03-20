@@ -9,8 +9,9 @@ use regex::Regex;
 use tokio::io::AsyncWriteExt;
 use url::Url;
 
-pub async fn create_backup(connection_string_option: Option<String>) -> Result<(), Error> {
+pub async fn create_backup(connection_string_option: Option<String>, targz_path:Option<String>) -> Result<(), Error> {
     let connection_string = connection_string_option.expect("Connection string not found");
+    let output_path = targz_path.expect("Targz path not found");
     let client_result = Client::with_uri_str(&connection_string).await;
     let db_name = get_mongodb_database_name(&connection_string);
 
@@ -40,7 +41,7 @@ pub async fn create_backup(connection_string_option: Option<String>) -> Result<(
             }
 
             let archive_file_name =
-                ensure_dir_exists("out").join(format!("{}.tar.gz", append_timestamp(&db_name)));
+                ensure_dir_exists(&output_path).join(format!("{}.tar.gz", append_timestamp(&db_name)));
 
             let archive = create_tar_gz(ensure_dir_exists("temp").as_path(), archive_file_name);
 

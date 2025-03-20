@@ -12,6 +12,10 @@ However, it is actually made for the cron mode to replace the ENVIRONMENT variab
 > [!NOTE]
 > The cron expression must be 6 characters long like the Spring Cron expressions
 
+> [!NOTE]
+> The `targzPath` should just be a singel word or string like "backup" or "out"
+> Leading or ending "/"  can lead to the output under ~/path/
+
 ```json
 {
   "cronJobExpression": String,
@@ -29,10 +33,15 @@ mongodb://<db_user_name>:<db_user_pwd>@<ip>:<port>/<db_name>?retryWrites=true&w=
 
 
 `cronJobExpression` example:
+*Would create a backup every minute*
 ```
 0 * * * * * 
 ```
-*Would create a backup every minute*
+*Would create a backup every 24h*
+```
+0 0 0 * * * 
+```
+
 
 ## Docker
 ```

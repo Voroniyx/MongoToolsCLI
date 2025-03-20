@@ -7,11 +7,12 @@ use mongodb::error::Error;
 use mongodb::Client;
 use regex::Regex;
 use tokio::io::AsyncWriteExt;
+use url::Url;
 
 pub async fn create_backup(connection_string_option: Option<String>) -> Result<(), Error> {
     let connection_string = connection_string_option.expect("Connection string not found");
     let client_result = Client::with_uri_str(&connection_string).await;
-    let db_name = extract_db_from_connection_string(&connection_string);
+    let db_name = get_mongodb_database_name(&connection_string);
 
     match client_result {
         Ok(client) => {
@@ -69,12 +70,25 @@ pub fn handle_backup_result(result: Result<(), Error>, suppress_ok_msg: bool) {
 }
 
 pub fn extract_db_from_connection_string(connection_string: &str) -> String {
-    let re = Regex::new(
-        r"mongodb\+srv?://(?:([^:]+):([^@]+)@)?([\w.-]+)/([^?]+)(?:\?(.*))?"
-    ).unwrap();
+    let re =
+        Regex::new(r"mongodb\+srv?://(?:([^:]+):([^@]+)@)?([\w.-]+)/([^?]+)(?:\?(.*))?").unwrap();
 
     if let Some(captures) = re.captures(connection_string) {
-        return captures.get(4).map_or_else(|| "".to_string(), |m| m.as_str().to_string());
+        return captures
+            .get(4)
+            .map_or_else(|| "".to_string(), |m| m.as_str().to_string());
+    }
+
+    "".to_string()
+}
+
+pub fn get_mongodb_database_name(connection_string: &str) -> String {
+    if let Ok(url) = Url::parse(connection_string) {
+        if let Some(db_name) = url.path_segments().and_then(|segments| segments.last()) {
+            if !db_name.is_empty() {
+                return db_name.to_string();
+            }
+        }
     }
 
     "".to_string()

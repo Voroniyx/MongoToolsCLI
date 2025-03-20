@@ -17,6 +17,7 @@ dependencies = [
  "serde_json",
  "tar",
  "tokio",
+ "url",
 ]
 
 [[package]]

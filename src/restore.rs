@@ -1,4 +1,4 @@
-use crate::backup::extract_db_from_connection_string;
+use crate::backup::Backup;
 use crate::config::Config;
 use colored::Colorize;
 use flate2::read::GzDecoder;
@@ -19,7 +19,9 @@ pub async fn restore_from_targz(config: Config) {
     let archive_path = config.targz_path.expect("Tar GZ Path not found");
     let file_contents = get_content_from_targz_inner_files(&archive_path).await;
 
-    let conn_string = config.connection_string.expect("Connection String not found");
+    let conn_string = config
+        .connection_string
+        .expect("Connection String not found");
     let client_result = Client::with_uri_str(&conn_string).await;
 
     if !client_result.is_ok() {
@@ -35,7 +37,7 @@ pub async fn restore_from_targz(config: Config) {
                 handle_single_collection(
                     collection_data,
                     &client,
-                    extract_db_from_connection_string(&conn_string).as_str(),
+                    Backup::extract_db_from_connection_string(&conn_string).as_str(),
                 )
                 .await;
             }

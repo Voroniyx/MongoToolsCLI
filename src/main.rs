@@ -97,8 +97,6 @@ async fn manual(config: Option<Config>) {
             let unwrapped_config = config.unwrap();
             restore_from_targz(unwrapped_config).await;
         }
-    } else if input == "test-delete" {
-        // Backup::check_max_concurrent_backups("")
     } else {
         Log::error("No matching option provided");
     }

@@ -49,7 +49,6 @@ async fn manual(config: Option<Config>) {
     Log::success("Following features are available");
     Log::success("- backup");
     Log::success("- restore");
-    Log::success("- test-delete");
 
     let input = Utils::ask(&*format!("{}", "Which feature should executed".magenta()));
 

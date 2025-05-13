@@ -10,6 +10,8 @@ pub struct Config {
     pub connection_string: Option<String>,
     pub force_cli: Option<bool>,
     pub targz_path: Option<String>,
+    pub max_concurrent_backups: Option<usize>,
+    pub delete_backup_after: Option<String>,
 }
 
 #[derive(Debug)]

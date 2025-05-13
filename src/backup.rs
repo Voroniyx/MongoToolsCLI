@@ -1,11 +1,18 @@
+use crate::log::Log;
 use crate::utils::Utils;
 use colored::Colorize;
 use core::result::Result::Err;
+use cron::TimeUnitSpec;
 use futures::stream::StreamExt;
+use glob::{glob, Paths};
 use mongodb::bson::{doc, Document};
-use mongodb::error::Error;
+use mongodb::error::Error as MongoError;
 use mongodb::Client;
 use regex::Regex;
+use std::collections::{HashMap, HashSet};
+use std::error::Error;
+use std::fmt::format;
+use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 use url::Url;
 
@@ -15,7 +22,8 @@ impl Backup {
     pub async fn create_backup(
         connection_string_option: Option<String>,
         targz_path: Option<String>,
-    ) -> Result<(), Error> {
+        max_concurrent_backups: Option<usize>,
+    ) -> Result<(), MongoError> {
         let connection_string = connection_string_option.expect("Connection string not found");
         let output_path = targz_path.expect("Targz path not found");
         let client_result = Client::with_uri_str(&connection_string).await;
@@ -62,7 +70,7 @@ impl Backup {
         }
     }
 
-    pub fn handle_backup_result(result: Result<(), Error>, suppress_ok_msg: bool) {
+    pub fn handle_backup_result(result: Result<(), MongoError>, suppress_ok_msg: bool) {
         match result {
             Ok(..) => {
                 if !suppress_ok_msg {
@@ -115,5 +123,72 @@ impl Backup {
             file.write_all(b"\n").await?;
         }
         Ok(())
+    }
+
+    pub async fn check_max_concurrent_backups(path: &str, max_concurrent_backups: Option<usize>) {
+        let files_result = Self::get_oldest_files(
+            format!(
+                "{}/*.tar.gz",
+                Utils::get_project_root_path(path)
+                    .display()
+                    .to_string()
+                    .as_str()
+            )
+            .as_str(),
+            max_concurrent_backups.unwrap_or(0),
+        );
+
+        match files_result {
+            Ok(files) => {
+                for file in files {
+                    let delete_result = Utils::delete_file(&file).await;
+                    match delete_result {
+                        Ok(_) => {}
+                        Err(_) => {
+                            Log::error(
+                                format!("Could not delete file {}", file.display().to_string())
+                                    .as_str(),
+                            );
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                Log::error(e.to_string().as_str());
+            }
+        }
+    }
+
+    fn extract_timestamp(path: &PathBuf, regex: &Regex) -> Option<u64> {
+        if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
+            if let Some(caps) = regex.captures(filename) {
+                let raw = caps.get(1)?.as_str();
+                let numeric: String = raw.chars().filter(|c| c.is_numeric()).collect();
+                return numeric.parse::<u64>().ok();
+            }
+        }
+        None
+    }
+
+    fn get_oldest_files(
+        glob_pattern: &str,
+        max_concurrent_backups: usize,
+    ) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+        let re = Regex::new(r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")?;
+
+        let mut files_with_timestamps: Vec<(PathBuf, u64)> = glob(glob_pattern)?
+            .filter_map(Result::ok)
+            .filter_map(|path| Self::extract_timestamp(&path, &re).map(|ts| (path, ts)))
+            .collect();
+
+        files_with_timestamps.sort_by_key(|(_, ts)| *ts);
+
+        let oldest = files_with_timestamps
+            .into_iter()
+            .take(max_concurrent_backups)
+            .map(|(path, _)| path)
+            .collect();
+
+        Ok(oldest)
     }
 }

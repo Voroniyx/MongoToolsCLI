@@ -37,7 +37,7 @@ pub async fn restore_from_targz(config: Config) {
                 handle_single_collection(
                     collection_data,
                     &client,
-                    Backup::extract_db_from_connection_string(&conn_string).as_str(),
+                    Backup::get_mongodb_database_name(&conn_string).as_str(),
                 )
                 .await;
             }

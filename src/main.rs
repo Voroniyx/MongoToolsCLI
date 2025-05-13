@@ -1,3 +1,4 @@
+use crate::backup::Backup;
 use crate::config::{Config, ConfigLoadError};
 use crate::log::Log;
 use crate::restore::restore_from_targz;
@@ -7,7 +8,6 @@ use colored::Colorize;
 use cron::Schedule;
 use std::cmp::PartialEq;
 use std::str::FromStr;
-use crate::backup::Backup;
 
 mod backup;
 mod config;
@@ -49,7 +49,7 @@ async fn manual(config: Option<Config>) {
     Log::success("Following features are available");
     Log::success("- backup");
     Log::success("- restore");
-
+    Log::success("- test-delete");
 
     let input = Utils::ask(&*format!("{}", "Which feature should executed".magenta()));
 
@@ -62,6 +62,7 @@ async fn manual(config: Option<Config>) {
                     let backup_result = Backup::create_backup(
                         user_provided_config.connection_string,
                         user_provided_config.targz_path,
+                        user_provided_config.max_concurrent_backups,
                     )
                     .await;
                     Backup::handle_backup_result(backup_result, false);
@@ -72,7 +73,12 @@ async fn manual(config: Option<Config>) {
             }
         } else {
             let cnf = config.unwrap();
-            let backup_result = Backup::create_backup(cnf.connection_string, cnf.targz_path).await;
+            let backup_result = Backup::create_backup(
+                cnf.connection_string,
+                cnf.targz_path,
+                cnf.max_concurrent_backups,
+            )
+            .await;
             Backup::handle_backup_result(backup_result, false);
         }
     } else if input == "restore" {
@@ -91,6 +97,8 @@ async fn manual(config: Option<Config>) {
             let unwrapped_config = config.unwrap();
             restore_from_targz(unwrapped_config).await;
         }
+    } else if input == "test-delete" {
+        // Backup::check_max_concurrent_backups("")
     } else {
         Log::error("No matching option provided");
     }
@@ -123,6 +131,7 @@ async fn cron(config: Config) {
             let backup_result = Backup::create_backup(
                 Option::from(connection_string.clone()),
                 Option::from(output_path.clone()),
+                Option::from(0),
             )
             .await;
             Backup::handle_backup_result(backup_result, true);
@@ -141,6 +150,8 @@ fn ask_user_for_config(mode: CliMode) -> Result<Config, String> {
         targz_path: None,
         force_cli: None,
         cron_job_expression: None,
+        max_concurrent_backups: None,
+        delete_backup_after: None,
     };
 
     config.connection_string = Option::from(Utils::ask(&*format!(

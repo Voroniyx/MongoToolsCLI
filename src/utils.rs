@@ -53,6 +53,10 @@ impl Utils {
         fs::remove_dir_all(path)
     }
 
+    pub async fn delete_file(file_path: &PathBuf) -> io::Result<()> {
+        tokio::fs::remove_file(file_path).await
+    }
+
     pub fn create_tar_gz(src_dir: &Path, output_file: PathBuf) -> Result<(), Error> {
         let tar_gz_file = File::create(output_file)?;
         let encoder = GzEncoder::new(tar_gz_file, Compression::best());

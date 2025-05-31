@@ -52,12 +52,9 @@ impl CleanUpManager {
                 for file in files {
                     let delete_result = Utils::delete_file(&file).await;
                     match delete_result {
-                        Ok(_) => {
-                            Log::success(
-                                format!("Deleted file: {}", file.display().to_string())
-                                    .as_str(),
-                            )
-                        }
+                        Ok(_) => Log::success(
+                            format!("Deleted file: {}", file.display().to_string()).as_str(),
+                        ),
                         Err(_) => {
                             Log::error(
                                 format!("Could not delete file {}", file.display().to_string())
@@ -92,7 +89,7 @@ impl CleanUpManager {
 
         let oldest = files_with_timestamps
             .into_iter()
-            .take(max_concurrent_backups)
+            .take(max_concurrent_backups.unwrap())
             .map(|(path, _)| path)
             .collect();
 
@@ -124,7 +121,11 @@ impl CleanUpManager {
         Ok(old_files)
     }
 
-    fn extract_numeric_timestamp_from_filename(path: &PathBuf, regex: &Regex) -> Option<u64> {
+    fn extract_numeric_timestamp_from_filename(
+        &self,
+        path: &PathBuf,
+        regex: &Regex,
+    ) -> Option<u64> {
         if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
             if let Some(caps) = regex.captures(filename) {
                 let raw = caps.get(1)?.as_str();

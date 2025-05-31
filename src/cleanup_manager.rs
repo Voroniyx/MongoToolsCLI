@@ -52,7 +52,12 @@ impl CleanUpManager {
                 for file in files {
                     let delete_result = Utils::delete_file(&file).await;
                     match delete_result {
-                        Ok(_) => {}
+                        Ok(_) => {
+                            Log::success(
+                                format!("Deleted file: {}", file.display().to_string())
+                                    .as_str(),
+                            )
+                        }
                         Err(_) => {
                             Log::error(
                                 format!("Could not delete file {}", file.display().to_string())

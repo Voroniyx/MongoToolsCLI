@@ -8,10 +8,9 @@ use std::path::Path;
 pub struct Config {
     pub cron_job_expression: Option<String>,
     pub connection_string: Option<String>,
-    pub force_cli: Option<bool>,
-    pub targz_path: Option<String>,
+    pub tar_gz_path: Option<String>,
     pub max_concurrent_backups: Option<usize>,
-    pub delete_backup_after: Option<String>,
+    pub delete_backup_after: Option<String>, //default 90 days
 }
 
 #[derive(Debug)]
@@ -32,5 +31,15 @@ impl Config {
             .map_err(|e| ConfigLoadError::ParseError(format!("Failed to parse JSON: {}", e)))?;
 
         Ok(config)
+    }
+
+    pub fn clone(&self) -> Config {
+        Config {
+            connection_string: self.connection_string.clone(),
+            max_concurrent_backups: self.max_concurrent_backups.clone(),
+            tar_gz_path: self.tar_gz_path.clone(),
+            cron_job_expression: self.cron_job_expression.clone(),
+            delete_backup_after: self.delete_backup_after.clone(),
+        }
     }
 }

@@ -80,4 +80,8 @@ impl Utils {
             input.to_string()
         }
     }
+
+    pub fn has_cron_arg() -> bool {
+        env::args().any(|arg| arg == "--cron-arg")
+    }
 }

@@ -13,7 +13,7 @@ However, it is actually made for the cron mode to replace the ENVIRONMENT variab
 > The cron expression must be 6 characters long like the Spring Cron expressions
 
 > [!NOTE]
-> The `targzPath` should just be a singel word or string like "backup" or "out"
+> The `targzPath` should just be a single word or string like "backup" or "out"
 > Leading or ending "/"  can lead to the output under ~/path/
 
 ```json

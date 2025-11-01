@@ -80,17 +80,22 @@ impl Backup {
     }
 
     pub fn extract_db_from_connection_string(connection_string: &str) -> String {
-        let re = Regex::new(r"mongodb\+srv?://(?:([^:]+):([^@]+)@)?([\w.-]+)/([^?]+)(?:\?(.*))?")
-            .unwrap();
+        if !connection_string.starts_with("mongodb://")
+            && !connection_string.starts_with("mongodb+srv://")
+        {
+            return "".to_string();
+        }
 
-        if let Some(captures) = re.captures(connection_string) {
-            return captures
-                .get(4)
-                .map_or_else(|| "".to_string(), |m| m.as_str().to_string());
+        if let Ok(url) = Url::parse(connection_string) {
+            let path = url.path();
+            if !path.is_empty() && path != "/" {
+                return path.trim_start_matches('/').to_string();
+            }
         }
 
         "".to_string()
     }
+
 
     pub fn get_mongodb_database_name(connection_string: &str) -> String {
         if let Ok(url) = Url::parse(connection_string) {

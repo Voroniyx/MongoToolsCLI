@@ -83,6 +83,10 @@ async fn handle_single_collection(
     mongo_client: &Client,
     database_name: &str,
 ) {
+    if collection_data.name.trim().is_empty() || collection_data.name.starts_with('.') {
+        panic!("Invalid collection name: '{}'", collection_data.name);
+    }
+
     let database = mongo_client.database(database_name);
     let collection = database.collection::<Document>(collection_data.name.as_str());
 

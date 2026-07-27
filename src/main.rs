@@ -70,6 +70,7 @@ async fn manual(config: Option<Config>) {
                     let backup_result = Backup::create_backup(
                         user_provided_config.connection_string,
                         user_provided_config.targz_path,
+                        user_provided_config.name,
                     )
                     .await;
                     Backup::handle_backup_result(backup_result, false);
@@ -80,7 +81,8 @@ async fn manual(config: Option<Config>) {
             }
         } else {
             let cnf = config.unwrap();
-            let backup_result = Backup::create_backup(cnf.connection_string, cnf.targz_path).await;
+            let backup_result =
+                Backup::create_backup(cnf.connection_string, cnf.targz_path, cnf.name).await;
             Backup::handle_backup_result(backup_result, false);
         }
     } else if input == "restore" {
@@ -122,21 +124,16 @@ async fn cron(configs: Vec<Config>) {
                     if let Some(job_time) = schedule.upcoming(Utc).take(1).next() {
                         let until_next = job_time - Utc::now();
                         tokio::time::sleep(until_next.to_std().unwrap()).await;
-                        Log::info(&format!(
-                            "{} Starting Backup...",
-                            config.name.clone().unwrap()
-                        ));
+                        Log::info(&format!("{} Starting Backup...", config.name.clone()));
 
                         let backup_result = Backup::create_backup(
                             Option::from(connection_string.clone()),
                             Option::from(output_path.clone()),
+                            config.name.clone(),
                         )
                         .await;
                         Backup::handle_backup_result(backup_result, true);
-                        Log::success(&format!(
-                            "{} Backup finished!",
-                            config.name.clone().unwrap()
-                        ));
+                        Log::success(&format!("{} Backup finished!", config.name.clone()));
                     }
                 }
             })
@@ -154,8 +151,17 @@ fn ask_user_for_config(mode: CliMode) -> Result<Config, String> {
         targz_path: None,
         force_cli: None,
         cron_job_expression: None,
-        name: None,
+        name: "".to_string(),
     };
+
+    config.name = Utils::ask(&*format!(
+        "{}",
+        "Please provide a name for the config".magenta()
+    ));
+
+    if Some(config.name.clone()).is_none() {
+        return Err(String::from("Name is empty"));
+    }
 
     config.connection_string = Option::from(Utils::ask(&*format!(
         "{}",

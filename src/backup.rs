@@ -14,6 +14,7 @@ impl Backup {
     pub async fn create_backup(
         connection_string_option: Option<String>,
         targz_path: Option<String>,
+        name: String,
     ) -> Result<(), Error> {
         let connection_string = connection_string_option.expect("Connection string not found");
         let output_path = targz_path.expect("Targz path not found");
@@ -23,7 +24,7 @@ impl Backup {
         match client_result {
             Ok(client) => {
                 let db = client.database(&db_name);
-                let temp_dir = Utils::ensure_dir_exists("temp");
+                let temp_dir = Utils::ensure_dir_exists(&format!("temp_{}", name));
 
                 let collection_names = db.list_collection_names().await?;
                 for collection_name in collection_names {
@@ -94,7 +95,6 @@ impl Backup {
 
         "".to_string()
     }
-
 
     pub fn get_mongodb_database_name(connection_string: &str) -> String {
         if let Ok(url) = Url::parse(connection_string) {

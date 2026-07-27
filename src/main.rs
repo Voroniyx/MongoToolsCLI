@@ -44,6 +44,7 @@ async fn main() {
             }
         }
         Err(ConfigLoadError::NotFound) => {
+            Log::info("Entering manual mode, because no config file was found.");
             //CLI Mode
             manual(None).await;
         }

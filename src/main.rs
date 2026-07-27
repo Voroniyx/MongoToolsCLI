@@ -1,3 +1,4 @@
+use crate::backup::Backup;
 use crate::config::{Config, ConfigLoadError};
 use crate::log::Log;
 use crate::restore::restore_from_targz;
@@ -7,7 +8,6 @@ use colored::Colorize;
 use cron::Schedule;
 use std::cmp::PartialEq;
 use std::str::FromStr;
-use crate::backup::Backup;
 
 mod backup;
 mod config;
@@ -24,14 +24,19 @@ enum CliMode {
 #[tokio::main]
 async fn main() {
     match Config::load().await {
-        Ok(config) => {
-            let cli_force = config.force_cli.unwrap_or(false);
-            if cli_force {
-                //cli with config
-                manual(Some(config)).await;
-            } else {
-                //Cron Mode
-                cron(config).await;
+        Ok(configs) => {
+            let single_config = configs.len() == 1;
+            if single_config {
+                let first_config = configs.first().unwrap();
+
+                let cli_force = first_config.force_cli.unwrap_or(false);
+                if cli_force {
+                    //cli with config
+                    manual(configs.first().cloned()).await;
+                } else {
+                    //Cron Mode
+                    cron(configs).await;
+                }
             }
         }
         Err(ConfigLoadError::NotFound) => {
@@ -49,7 +54,6 @@ async fn manual(config: Option<Config>) {
     Log::success("Following features are available");
     Log::success("- backup");
     Log::success("- restore");
-
 
     let input = Utils::ask(&*format!("{}", "Which feature should executed".magenta()));
 
@@ -96,42 +100,41 @@ async fn manual(config: Option<Config>) {
     }
 }
 
-async fn cron(config: Config) {
-    Log::info("");
+async fn cron(configs: Vec<Config>) {
+    Log::info("MongoDB CLI Tools Cron Job started");
 
-    println!(
-        "{} {}",
-        Utils::get_readable_timestamp(),
-        "MongoDB CLI Tools Cron Job started".green().bold()
-    );
+    let handles: Vec<_> = configs
+        .into_iter()
+        .map(|config| {
+            tokio::spawn(async move {
+                let con_str = config.connection_string.expect("No connection string");
+                let cron_expression = config.cron_job_expression.expect("No cron job expression");
+                let output_path = config.targz_path.expect("No output path found");
 
-    let con_str = config.connection_string.expect("No connection string");
-    let cron_expression = config.cron_job_expression.expect("No cron job expression");
-    let output_path = config.targz_path.expect("No output path found");
+                let connection_string = Utils::trim_double_quotes_chars(con_str);
+                let schedule = Schedule::from_str(&cron_expression).expect("Invalid cron job time");
 
-    let connection_string = Utils::trim_double_quotes_chars(con_str);
-    let schedule = Schedule::from_str(&cron_expression).expect("Invalid cron job time");
-    loop {
-        if let Some(job_time) = schedule.upcoming(Utc).take(1).next() {
-            let until_next = job_time - Utc::now();
-            tokio::time::sleep(until_next.to_std().unwrap()).await;
-            println!(
-                "{} {}",
-                Utils::get_readable_timestamp(),
-                "Starting Backup...".blue()
-            );
-            let backup_result = Backup::create_backup(
-                Option::from(connection_string.clone()),
-                Option::from(output_path.clone()),
-            )
-            .await;
-            Backup::handle_backup_result(backup_result, true);
-            println!(
-                "{} {}",
-                Utils::get_readable_timestamp(),
-                "Backup finished!".green()
-            );
-        }
+                loop {
+                    if let Some(job_time) = schedule.upcoming(Utc).take(1).next() {
+                        let until_next = job_time - Utc::now();
+                        tokio::time::sleep(until_next.to_std().unwrap()).await;
+                        Log::info("Starting Backup...");
+
+                        let backup_result = Backup::create_backup(
+                            Option::from(connection_string.clone()),
+                            Option::from(output_path.clone()),
+                        )
+                            .await;
+                        Backup::handle_backup_result(backup_result, true);
+                        Log::success("Backup finished!");
+                    }
+                }
+            })
+        })
+        .collect();
+
+    for handle in handles {
+        let _ = handle.await;
     }
 }
 

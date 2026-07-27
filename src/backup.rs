@@ -5,7 +5,6 @@ use futures::stream::StreamExt;
 use mongodb::bson::{doc, Document};
 use mongodb::error::Error;
 use mongodb::Client;
-use regex::Regex;
 use tokio::io::AsyncWriteExt;
 use url::Url;
 

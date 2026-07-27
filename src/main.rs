@@ -7,6 +7,7 @@ use chrono::Utc;
 use colored::Colorize;
 use cron::Schedule;
 use std::cmp::PartialEq;
+use std::fmt::format;
 use std::str::FromStr;
 
 mod backup;
@@ -23,8 +24,10 @@ enum CliMode {
 
 #[tokio::main]
 async fn main() {
+    Log::info("Initializing...");
     match Config::load().await {
         Ok(configs) => {
+            Log::info(&format!("Loaded {} config entries.", configs.len()));
             let single_config = configs.len() == 1;
             if single_config {
                 let first_config = configs.first().unwrap();
@@ -37,6 +40,8 @@ async fn main() {
                     //Cron Mode
                     cron(configs).await;
                 }
+            } else {
+                cron(configs).await;
             }
         }
         Err(ConfigLoadError::NotFound) => {

@@ -21,8 +21,22 @@ However, it is actually made for the cron mode to replace the ENVIRONMENT variab
   "cronJobExpression": String,
   "connectionString": String,
   "forceCli": Boolean,
-  "targzPath": String
+  "targzPath": String,
+  "name": String,
 }
+```
+
+```json
+[
+  {
+    "cronJobExpression": String,
+    "connectionString": String,
+    "forceCli": Boolean,
+    "targzPath": String,
+    "name": String,
+  },
+  ...
+]
 ```
 
 `connectionString` example:
@@ -48,3 +62,5 @@ mongodb://<db_user_name>:<db_user_pwd>@<ip>:<port>/<db_name>?retryWrites=true&w=
 docker run --name <containername> -d -v /path/to/config.json:/app/config.json -v /path/to/backupfolder:/app/<targzPath-outputpath> ghcr.io/voroniyx/mongo-tools-cli
 ```
 On Windows, the paths may have to start and end in `"`
+If you have multiple entries in your config, and they point to different `<targzPath-outputpath>`, you need to add more volumes that each point to their respective `<targzPath-outputpath>` but can point to the same `/path/to/backupfolder`. 
+If you point to the same `/path/to/backupfolder` and the db names are the same you might get problems with backups that have the same names. Use at your own risk

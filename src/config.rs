@@ -10,6 +10,7 @@ pub struct Config {
     pub connection_string: Option<String>,
     pub force_cli: Option<bool>,
     pub targz_path: Option<String>,
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

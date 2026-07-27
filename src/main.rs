@@ -7,7 +7,6 @@ use chrono::Utc;
 use colored::Colorize;
 use cron::Schedule;
 use std::cmp::PartialEq;
-use std::fmt::format;
 use std::str::FromStr;
 
 mod backup;
@@ -123,15 +122,21 @@ async fn cron(configs: Vec<Config>) {
                     if let Some(job_time) = schedule.upcoming(Utc).take(1).next() {
                         let until_next = job_time - Utc::now();
                         tokio::time::sleep(until_next.to_std().unwrap()).await;
-                        Log::info("Starting Backup...");
+                        Log::info(&format!(
+                            "{} Starting Backup...",
+                            config.name.clone().unwrap()
+                        ));
 
                         let backup_result = Backup::create_backup(
                             Option::from(connection_string.clone()),
                             Option::from(output_path.clone()),
                         )
-                            .await;
+                        .await;
                         Backup::handle_backup_result(backup_result, true);
-                        Log::success("Backup finished!");
+                        Log::success(&format!(
+                            "{} Backup finished!",
+                            config.name.clone().unwrap()
+                        ));
                     }
                 }
             })
@@ -149,6 +154,7 @@ fn ask_user_for_config(mode: CliMode) -> Result<Config, String> {
         targz_path: None,
         force_cli: None,
         cron_job_expression: None,
+        name: None,
     };
 
     config.connection_string = Option::from(Utils::ask(&*format!(
